@@ -44,16 +44,18 @@ final class TabBarController: TabBarNavigationProtocol {
     
     private func createAlbumsController() -> UIViewController {
         let dataService = AlbumsDataService()
-        let presenter = AlbumsPresenter(dataService: dataService)
-        let viewController = AlbumsViewController(presenter: presenter)
-        presenter.view = viewController // Связываем Presenter с View
+        let viewModel = AlbumsViewModel(dataService: dataService)
+        let viewController = AlbumsViewController(viewModel: viewModel)
+      
         return viewController
     }
     
-    private func createController(rootViewController: UIViewController,
-                                  title: String,
-                                  systemIcon: String,
-                                  customIcon: String?) -> UIViewController {
+    private func createController(
+        rootViewController: UIViewController,
+        title: String,
+        systemIcon: String,
+        customIcon: String?
+    ) -> UIViewController {
         let navController = UINavigationController(rootViewController: rootViewController)
         
         // Приоритет у кастомной иконки, если она существует
