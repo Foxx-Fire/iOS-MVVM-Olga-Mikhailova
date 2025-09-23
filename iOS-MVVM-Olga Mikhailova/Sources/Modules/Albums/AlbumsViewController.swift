@@ -10,11 +10,11 @@ final class AlbumsViewController: BaseViewController {
     
     // MARK: - Properties
     
-    private let presenter: AlbumsPresenterProtocol
+    private let viewModel: AlbumsViewModelProtocol
     
     private lazy var albumsView: AlbumsView = {
         let view = AlbumsView { [weak self] sectionIndex in
-            self?.presenter.layoutType(for: sectionIndex)
+            self?.viewModel.layoutType(for: sectionIndex)
         }
         view.setupDataSource(dataSource: self)
         view.setupDelegate(delegate: self)
@@ -22,8 +22,8 @@ final class AlbumsViewController: BaseViewController {
     }()
     
     //MARK: - Init
-    init(presenter: AlbumsPresenterProtocol) {
-        self.presenter = presenter
+    init(viewModel: AlbumsViewModelProtocol) {
+        self.viewModel = viewModel
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -42,6 +42,7 @@ final class AlbumsViewController: BaseViewController {
         super.viewDidLoad()
         
         setupNavigation()
+        loadData()
     }
     
     //MARK: - private methods
@@ -58,6 +59,11 @@ final class AlbumsViewController: BaseViewController {
             buttonAction: addAction
         )
     }
+    
+    private func loadData() {
+        viewModel.loadData()
+        albumsView.reloadData()
+    }
 }
 
 // MARK: - Constants
@@ -67,16 +73,6 @@ extension AlbumsViewController {
             static let title = "Albums"
             static let buttonImageName = "plus"
         }
-        
-        //   static let backgroundColor: UIColor = .white
-    }
-}
-
-// MARK: - AlbumsViewProtocol
-
-extension AlbumsViewController: AlbumsViewProtocol {
-    func reloadData() {
-        albumsView.reloadData()
     }
 }
 
@@ -95,19 +91,19 @@ extension AlbumsViewController: UICollectionViewDataSource {
     
     // Определяет количество секций в коллекции
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return presenter.numberOfSections()
+        return viewModel.numberOfSections()
     }
     
     // Определяет количество ячеек в конкретной секции
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         
-        return presenter.numberOfItems(in: section)
+        return viewModel.numberOfItems(in: section)
     }
     
     // Создает и настраивает ячейку для конкретной позиции
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
-        guard let item = presenter.item(at: indexPath) else {
+        guard let item = viewModel.item(at: indexPath) else {
             return UICollectionViewCell()
         }
         
@@ -175,10 +171,10 @@ extension AlbumsViewController: UICollectionViewDataSource {
         }
         
         header.configure(
-            title: presenter.headerTitle(for: indexPath.section) ?? "",
-            buttonTitle: presenter.headerButtonTitle(for: indexPath.section),
+            title: viewModel.headerTitle(for: indexPath.section) ?? "",
+            buttonTitle: viewModel.headerButtonTitle(for: indexPath.section),
             buttonAction: { [weak self] in
-                self?.presenter.didTapHeaderButton(in: indexPath.section)
+                self?.viewModel.didTapHeaderButton(in: indexPath.section)
             }
         )
         
