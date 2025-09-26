@@ -1,20 +1,23 @@
 //
-//  AlbumsViewController.swift
-//  MVP-Olga Mikhailova
+//  Untitled.swift
+//  iOS-MVVM-Olga Mikhailova
 //
-//  Created by FoxxFire on 18.09.2025.
+//  Created by FoxxFire on 26.09.2025.
 //
+import Combine
 import UIKit
 
-final class AlbumsViewController: BaseViewController {
+final class AlbumsViewControllerWithCombine: BaseViewController {
     
     // MARK: - Properties
     
-    private let presenter: AlbumsPresenterProtocol
+    private let viewModel: AlbumsViewModelCombine
+    // для хранения подписок Combine
+    private var cancellables = Set<AnyCancellable>()
     
     private lazy var albumsView: AlbumsView = {
         let view = AlbumsView { [weak self] sectionIndex in
-            self?.presenter.layoutType(for: sectionIndex)
+            self?.viewModel.layoutType(for: sectionIndex)
         }
         view.setupDataSource(dataSource: self)
         view.setupDelegate(delegate: self)
@@ -22,8 +25,8 @@ final class AlbumsViewController: BaseViewController {
     }()
     
     //MARK: - Init
-    init(presenter: AlbumsPresenterProtocol) {
-        self.presenter = presenter
+    init(viewModel: AlbumsViewModelCombine) {
+        self.viewModel = viewModel
         
         super.init(nibName: nil, bundle: nil)
     }
@@ -42,9 +45,42 @@ final class AlbumsViewController: BaseViewController {
         super.viewDidLoad()
         
         setupNavigation()
+        setupBindings()
+        loadData()
     }
     
     //MARK: - private methods
+    
+    private func setupBindings() {
+        // Подписываемся на изменения sections через Combine
+        viewModel.$sections // ← Знак $ значит "дай мне Publisher этого свойства"
+            .receive(on: DispatchQueue.main) //  Гарантируем главный поток
+            .sink { [weak self] sections in // Подписываемся на изменения
+                // Этот код выполнится КАЖДЫЙ РАЗ когда sections изменится
+                print("Данные обновились! Секций: \(sections.count)")
+                self?.albumsView.reloadData()
+            }
+            .store(in: &cancellables) //  Сохраняем подписку
+        
+        //  Подписываемся на изменения isLoading
+        viewModel.$isLoading
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isLoading in
+                print("Состояние загрузки: \(isLoading ? "началась" : "закончилась")")
+                isLoading ? self?.showLoading() : self?.hideLoading()
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func showLoading() {
+        // Показываем индикатор загрузки
+        print("Loading started...")
+    }
+    
+    private func hideLoading() {
+        // Скрываем индикатор загрузки
+        print("Loading finished!")
+    }
     
     private func setupNavigation() {
         let addAction = UIAction { _ in
@@ -58,31 +94,25 @@ final class AlbumsViewController: BaseViewController {
             buttonAction: addAction
         )
     }
+    
+    private func loadData() {
+        viewModel.loadData()
+    }
 }
 
 // MARK: - Constants
-extension AlbumsViewController {
+extension AlbumsViewControllerWithCombine {
     enum Constants {
         enum Navigation {
             static let title = "Albums"
             static let buttonImageName = "plus"
         }
-        
-        //   static let backgroundColor: UIColor = .white
-    }
-}
-
-// MARK: - AlbumsViewProtocol
-
-extension AlbumsViewController: AlbumsViewProtocol {
-    func reloadData() {
-        albumsView.reloadData()
     }
 }
 
 // MARK: - UICollectionViewDelegate
 
-extension AlbumsViewController: UICollectionViewDelegate {
+extension AlbumsViewControllerWithCombine: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         // Снимаем выделение с анимацией
         collectionView.deselectItem(at: indexPath, animated: true)
@@ -91,23 +121,23 @@ extension AlbumsViewController: UICollectionViewDelegate {
 
 // MARK: - UICollectionViewDataSource
 
-extension AlbumsViewController: UICollectionViewDataSource {
+extension AlbumsViewControllerWithCombine: UICollectionViewDataSource {
     
     // Определяет количество секций в коллекции
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return presenter.numberOfSections()
+        return viewModel.numberOfSections()
     }
     
     // Определяет количество ячеек в конкретной секции
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         
-        return presenter.numberOfItems(in: section)
+        return viewModel.numberOfItems(in: section)
     }
     
     // Создает и настраивает ячейку для конкретной позиции
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
-        guard let item = presenter.item(at: indexPath) else {
+        guard let item = viewModel.item(at: indexPath) else {
             return UICollectionViewCell()
         }
         
@@ -175,10 +205,10 @@ extension AlbumsViewController: UICollectionViewDataSource {
         }
         
         header.configure(
-            title: presenter.headerTitle(for: indexPath.section) ?? "",
-            buttonTitle: presenter.headerButtonTitle(for: indexPath.section),
+            title: viewModel.headerTitle(for: indexPath.section) ?? "",
+            buttonTitle: viewModel.headerButtonTitle(for: indexPath.section),
             buttonAction: { [weak self] in
-                self?.presenter.didTapHeaderButton(in: indexPath.section)
+                self?.viewModel.didTapHeaderButton(in: indexPath.section)
             }
         )
         
