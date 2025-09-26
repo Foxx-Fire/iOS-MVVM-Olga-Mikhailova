@@ -1,14 +1,15 @@
-//
-//  ViewModel.swift
-//  iOS-MVVM-Olga Mikhailova
-//
-//  Created by FoxxFire on 22.09.2025.
-//
+
+  ViewModel.swift
+  iOS-MVVM-Olga Mikhailova
+
+  Created by FoxxFire on 22.09.2025.
+
 
 import Foundation
 
 protocol AlbumsViewModelProtocol: AnyObject {
-    var sections: [AlbumSection] { get }
+    var sections: Observable<[AlbumSection]> { get }
+    var isLoading: Observable<Bool> { get }
     func loadData()
     func numberOfSections() -> Int
     func numberOfItems(in section: Int) -> Int
@@ -20,12 +21,13 @@ protocol AlbumsViewModelProtocol: AnyObject {
     func layoutType(for section: Int) -> AlbumCompositionalLayout.LayoutType?
 }
 
-class AlbumsViewModel: AlbumsViewModelProtocol {
+final class AlbumsViewModel: AlbumsViewModelProtocol {
     
     // MARK: - Properties
 
     private let dataService: AlbumsDataServiceProtocol
-    var sections: [AlbumSection] = []
+    var sections = Observable<[AlbumSection]>([])
+    var isLoading = Observable<Bool>(false)
     
     // MARK: - Init
     
@@ -36,26 +38,33 @@ class AlbumsViewModel: AlbumsViewModelProtocol {
     // MARK: - Public Methods
     
     func loadData() {
-        sections = dataService.getAllSections()
+        isLoading.value = true // ← Начало загрузки
+        
+        // Имитируем асинхронную загрузку
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let sectionsData = self.dataService.getAllSections()
+            self.sections.value = sectionsData
+            self.isLoading.value = false // ← Конец загрузки
+        }
     }
     
     //MARK: - helpers for DataSource
   
         func numberOfSections() -> Int {
-            return sections.count
+            return sections.value.count
         }
     
         func numberOfItems(in section: Int) -> Int {
-            guard section < sections.count else { return 0 }
-            return sections[section].items.count
+            guard section < sections.value.count else { return 0 }
+            return sections.value[section].items.count
         }
     
         func item(at indexPath: IndexPath) -> CellItemProtocol? {
-            guard indexPath.section < sections.count,
-                  indexPath.item < sections[indexPath.section].items.count else {
+            guard indexPath.section < sections.value.count,
+                  indexPath.item < sections.value[indexPath.section].items.count else {
                 return nil
             }
-            return sections[indexPath.section].items[indexPath.item]
+            return sections.value[indexPath.section].items[indexPath.item]
         }
     
         func didSelectItem(at indexPath: IndexPath) {
@@ -64,37 +73,33 @@ class AlbumsViewModel: AlbumsViewModelProtocol {
         }
     
     func didTapHeaderButton(in section: Int) {
-        guard let sectionType = dataService.getSectionType(at: section) else {
-            return
-        }
+        guard section < sections.value.count else { return }
         
-        switch sectionType {
+        switch sections.value[section].type {
         case .myAlbums: print("See All tapped for My Albums")
         case .sharedAlbums: print("See All tapped for Shared Albums")
-        case .mediaTypes, .other: print("Button tapped for section: \(sectionType.rawValue)")
+        case .mediaTypes, .other: print("Button tapped for section: \(sections.value[section].type.rawValue)")
         }
     }
     
     //MARK: - Headers
     
     func headerTitle(for section: Int) -> String? {
-        guard let section = dataService.getSection(at: section) else { return nil }
-        return section.header.title
+        guard section < sections.value.count else { return nil }
+        return sections.value[section].header.title
     }
     
     func headerButtonTitle(for section: Int) -> String? {
-        guard let section = dataService.getSection(at: section) else { return nil }
-        return section.header.buttonTitle
+        guard section < sections.value.count else { return nil }
+        return sections.value[section].header.buttonTitle
     }
     
     //MARK: - layoutType
     
     func layoutType(for section: Int) -> AlbumCompositionalLayout.LayoutType? {
-        guard let sectionType = dataService.getSectionType(at: section) else {
-            return nil
-        }
+        guard section < sections.value.count else { return nil }
         
-        switch sectionType {
+        switch sections.value[section].type {
         case .myAlbums: return .columns
         case .sharedAlbums: return .plain
         case .mediaTypes, .other: return .tableStyle
