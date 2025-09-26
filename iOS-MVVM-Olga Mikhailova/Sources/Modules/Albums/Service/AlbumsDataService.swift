@@ -4,10 +4,10 @@
 //
 //  Created by FoxxFire on 19.09.2025.
 //
+import Foundation
+
 protocol AlbumsDataServiceProtocol {
     func getAllSections() -> [AlbumSection]
-    func getSection(at index: Int) -> AlbumSection?
-    func getSectionType(at index: Int) -> SectionType?
 }
 
 class AlbumsDataService: AlbumsDataServiceProtocol {
@@ -66,16 +66,5 @@ class AlbumsDataService: AlbumsDataServiceProtocol {
             items: MediaAndOther.otherType
         )
     }
-    
-    func getSection(at index: Int) -> AlbumSection? {
-        let sections = getAllSections()
-        guard index < sections.count else { return nil }
-        return sections[index]
-    }
-    
-    func getSectionType(at index: Int) -> SectionType? {
-        return getSection(at: index)?.type
-    }
-    
 }
 
