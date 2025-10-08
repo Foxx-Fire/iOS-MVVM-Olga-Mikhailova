@@ -12,13 +12,9 @@ protocol AlbumsViewModelProtocolCombine: ObservableObject {
     var sections: [AlbumSection] { get }
     var isLoading: Bool { get }
     func loadData()
-    func numberOfSections() -> Int
-    func numberOfItems(in section: Int) -> Int
     func item(at indexPath: IndexPath) -> CellItemProtocol?
     func didSelectItem(at indexPath: IndexPath)
     func didTapHeaderButton(in section: Int)
-    func headerTitle(for section: Int) -> String?
-    func headerButtonTitle(for section: Int) -> String?
     func layoutType(for section: Int) -> AlbumCompositionalLayout.LayoutType?
 }
 
@@ -51,15 +47,6 @@ final class AlbumsViewModelCombine: AlbumsViewModelProtocolCombine {
     
     //MARK: - helpers for DataSource
     
-    func numberOfSections() -> Int {
-        return sections.count
-    }
-    
-    func numberOfItems(in section: Int) -> Int {
-        guard section < sections.count else { return 0 }
-        return sections[section].items.count
-    }
-    
     func item(at indexPath: IndexPath) -> CellItemProtocol? {
         guard indexPath.section < sections.count,
               indexPath.item < sections[indexPath.section].items.count else {
@@ -81,18 +68,6 @@ final class AlbumsViewModelCombine: AlbumsViewModelProtocolCombine {
         case .sharedAlbums: print("See All tapped for Shared Albums")
         case .mediaTypes, .other: print("Button tapped for section: \(sections[section].type.rawValue)")
         }
-    }
-    
-    //MARK: - Headers
-    
-    func headerTitle(for section: Int) -> String? {
-        guard section < sections.count else { return nil }
-        return sections[section].header.title
-    }
-    
-    func headerButtonTitle(for section: Int) -> String? {
-        guard section < sections.count else { return nil }
-        return sections[section].header.buttonTitle
     }
     
     //MARK: - layoutType
