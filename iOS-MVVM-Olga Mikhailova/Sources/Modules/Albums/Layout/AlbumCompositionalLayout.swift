@@ -46,14 +46,26 @@ final class AlbumCompositionalLayout {
     private func createMyAlbumsSection(
         environment: NSCollectionLayoutEnvironment
     ) -> NSCollectionLayoutSection {
-        let contentWidth = environment.container.effectiveContentSize.width - Constants.sidePadding * 2
-        let columnWidth = (contentWidth - Constants.interColumnSpacing) / 2
+        
+        let contentWidth = environment.container.effectiveContentSize.width
+        // Учитываем инсеты секции при расчёте колонки
+        let sectionInsets = NSDirectionalEdgeInsets(
+            top: .zero,
+            leading: Constants.sidePadding,
+            bottom: Constants.sidePadding,
+            trailing: Constants.sidePadding
+        )
+        
+        let usableWidth = contentWidth - (sectionInsets.leading + sectionInsets.trailing)
+        
+        // Две колонки: каждая = (usableWidth - межколоночный)/2
+        let columnWidth = (usableWidth - Constants.interColumnSpacing) / 2
         let itemHeight = calculateMyAlbumsItemHeight(columnWidth: columnWidth)
         let verticalGroupHeight = itemHeight * 2 + Constants.verticalSpacing
         
         // Создаем элементы
         let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1),
+            widthDimension: .fractionalWidth(1.0),
             heightDimension: .absolute(itemHeight)
         )
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
@@ -65,8 +77,11 @@ final class AlbumCompositionalLayout {
         )
         let verticalGroup = NSCollectionLayoutGroup.vertical(
             layoutSize: verticalGroupSize,
-            subitems: [item, item]
+            repeatingSubitem: item,
+            count: 2
         )
+        
+        verticalGroup.interItemSpacing = .fixed(Constants.verticalSpacing)
         
         // Основная горизонтальная группа
         let horizontalGroupSize = NSCollectionLayoutSize(
@@ -75,20 +90,18 @@ final class AlbumCompositionalLayout {
         )
         let group = NSCollectionLayoutGroup.horizontal(
             layoutSize: horizontalGroupSize,
-            subitems: [verticalGroup, verticalGroup]
+            repeatingSubitem: verticalGroup,
+            count: 2
         )
         group.interItemSpacing = .fixed(Constants.interColumnSpacing)
         
         // Настраиваем секцию
         let section = NSCollectionLayoutSection(group: group)
-        section.orthogonalScrollingBehavior = .continuous
-        section.interGroupSpacing = Constants.interColumnSpacing
-        section.contentInsets = NSDirectionalEdgeInsets(
-            top: .zero,
-            leading: Constants.sidePadding,
-            bottom: Constants.sidePadding,
-            trailing: Constants.sidePadding
-        )
+        section.orthogonalScrollingBehavior = .continuous // Горизонтальный скролл
+        section.interGroupSpacing = Constants.interColumnSpacing // Промежуток между группами
+        section.contentInsets = sectionInsets
+        
+        print("📱 Screen bounds: \(UIScreen.main.bounds.size)")
         
         addHeader(to: section)
         addSeparator(to: section)
@@ -96,9 +109,18 @@ final class AlbumCompositionalLayout {
         return section
     }
     
-    private func createSharedAlbumsSection(environment: NSCollectionLayoutEnvironment) -> NSCollectionLayoutSection {
-        let contentWidth = environment.container.effectiveContentSize.width - Constants.sidePadding * 2
-        let groupWidth = contentWidth * Constants.sharedAlbumsCardWidthMultiplier
+    private func createSharedAlbumsSection(
+        environment: NSCollectionLayoutEnvironment
+    ) -> NSCollectionLayoutSection {
+        let contentWidth = environment.container.effectiveContentSize.width
+        let sectionInsets = NSDirectionalEdgeInsets(
+            top: Constants.sidePadding,
+            leading: Constants.sidePadding,
+            bottom: Constants.sidePadding,
+            trailing: Constants.sidePadding
+        )
+        let usuableWidth = contentWidth - (sectionInsets.trailing + sectionInsets.leading)
+        let groupWidth = usuableWidth * Constants.sharedAlbumsCardWidthMultiplier
         let itemHeight = calculateSharedAlbumsItemHeight(groupWidth: groupWidth)
         
         // Создаем элемент
@@ -107,7 +129,6 @@ final class AlbumCompositionalLayout {
             heightDimension: .absolute(itemHeight)
         )
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
-        item.contentInsets = .zero
         
         // Создаем группу
         let groupSize = NSCollectionLayoutSize(
@@ -123,12 +144,7 @@ final class AlbumCompositionalLayout {
         let section = NSCollectionLayoutSection(group: group)
         section.orthogonalScrollingBehavior = .continuousGroupLeadingBoundary
         section.interGroupSpacing = Constants.sidePadding
-        section.contentInsets = NSDirectionalEdgeInsets(
-            top: Constants.sidePadding,
-            leading: Constants.sidePadding,
-            bottom: Constants.sidePadding,
-            trailing: Constants.sidePadding
-        )
+        section.contentInsets = sectionInsets
         
         addHeader(to: section)
         addSeparator(to: section)
@@ -238,21 +254,23 @@ private extension AlbumCompositionalLayout {
         static let listGroupEstimatedHeight: CGFloat = 44
     }
     
+    
     // Calculatings
     func calculateMyAlbumsItemHeight(columnWidth: CGFloat) -> CGFloat {
-        let titleLineHeight = Constants.myAlbumsDescriptionFont.lineHeight
-        let countLineHeight = Constants.myAlbumsCountFont.lineHeight
-        let textHeight = Constants.myAlbumsStackTopOffset +
-        Constants.myAlbumsStackSpacing +
-        titleLineHeight + countLineHeight
-        return columnWidth + textHeight
+        let title = UIFontMetrics.default.scaledValue(for: Constants.myAlbumsDescriptionFont.lineHeight)
+        let count = UIFontMetrics.default.scaledValue(for: Constants.myAlbumsCountFont.lineHeight)
+        let text = Constants.myAlbumsStackTopOffset
+        + title
+        + Constants.myAlbumsStackSpacing
+        + count
+        return columnWidth + text
     }
     
     func calculateSharedAlbumsItemHeight(groupWidth: CGFloat) -> CGFloat {
-        let titleLineHeight = Constants.sharedAlbumsDescriptionFont.lineHeight
-        let labelExtra = Constants.sharedAlbumsStackTopOffset +
-        Constants.sharedAlbumsStackSpacing +
-        titleLineHeight * 2
+        let title = UIFontMetrics.default.scaledValue(for: Constants.sharedAlbumsDescriptionFont.lineHeight)
+        let labelExtra = Constants.sharedAlbumsStackTopOffset
+        + Constants.sharedAlbumsStackSpacing
+        + title * 2
         return groupWidth + labelExtra
     }
 }
