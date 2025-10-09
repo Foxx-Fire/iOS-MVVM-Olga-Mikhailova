@@ -125,13 +125,14 @@ extension AlbumsViewControllerWithCombine: UICollectionViewDataSource {
     
     // Определяет количество секций в коллекции
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        return viewModel.numberOfSections()
+        return viewModel.sections.count
     }
     
     // Определяет количество ячеек в конкретной секции
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        
-        return viewModel.numberOfItems(in: section)
+        guard section < viewModel.sections.count else { return 0 }
+
+        return viewModel.sections[section].items.count
     }
     
     // Создает и настраивает ячейку для конкретной позиции
@@ -204,9 +205,12 @@ extension AlbumsViewControllerWithCombine: UICollectionViewDataSource {
             return UICollectionReusableView()
         }
         
+        guard indexPath.section < viewModel.sections.count else { return header }
+        
+        
         header.configure(
-            title: viewModel.headerTitle(for: indexPath.section) ?? "",
-            buttonTitle: viewModel.headerButtonTitle(for: indexPath.section),
+            title: viewModel.sections[indexPath.section].header.title,
+            buttonTitle: viewModel.sections[indexPath.section].header.buttonTitle,
             buttonAction: { [weak self] in
                 self?.viewModel.didTapHeaderButton(in: indexPath.section)
             }
@@ -215,9 +219,3 @@ extension AlbumsViewControllerWithCombine: UICollectionViewDataSource {
         return header
     }
 }
-
-
-
-
-
-
